@@ -1,0 +1,39 @@
+version: '3'
+
+services:
+
+  postgres:
+    container_name: payment_postgres_container
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: ead-payment
+    ports:
+      - "5436:5432"
+    volumes:
+      - payment-data:/var/lib/postgresql/data
+    networks:
+      - payment-network
+
+  pgadmin:
+    container_name: payment_pgadmin_container
+    image: dpage/pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "admin@admin.com"
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5053:80"
+    depends_on:
+      - postgres
+    networks:
+      - payment-network
+
+volumes:
+  payment-data:
+
+networks:
+  payment-network:
+    driver: bridge
