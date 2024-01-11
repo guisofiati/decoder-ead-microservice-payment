@@ -1,12 +1,18 @@
 package com.ead.payment.models;
 
+import com.ead.payment.enums.PaymentStatus;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 
 import javax.persistence.*;
 import java.io.Serializable;
+import java.time.LocalDateTime;
+import java.util.Set;
 import java.util.UUID;
 
 @Data
@@ -36,6 +42,24 @@ public class UserModel implements Serializable {
     @Column(length = 20)
     private String cpf;
 
+    @Column(length = 20)
+    private String phoneNumber;
+
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private PaymentStatus paymentStatus;
+
     @Column
-    private String imageUrl;
+    private LocalDateTime paymentExpirationDate;
+
+    @Column
+    private LocalDateTime firstPaymentDate;
+
+    @Column
+    private LocalDateTime lastPaymentDate;
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    @Fetch(FetchMode.SUBSELECT)
+    private Set<PaymentModel> payments;
 }
