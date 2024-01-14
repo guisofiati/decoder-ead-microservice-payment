@@ -6,7 +6,12 @@ import com.ead.payment.models.PaymentModel;
 import com.ead.payment.models.UserModel;
 import com.ead.payment.services.PaymentService;
 import com.ead.payment.services.UserService;
+import com.ead.payment.specifications.SpecificationTemplate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -46,5 +51,24 @@ public class PaymentController {
             }
         }
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(paymentService.requestPayment(paymentRequestDto, userModelOptional.get()));
+    }
+
+    @PreAuthorize("hasAnyRole('USER')")
+    @GetMapping("/users/{userId}/payments")
+    public ResponseEntity<Page<PaymentModel>> getAllPayments(@PathVariable(value = "userId") UUID userId,
+                                                             SpecificationTemplate.PaymentSpec spec,
+                                                             @PageableDefault(page = 0, size = 10, sort = "paymentId", direction = Sort.Direction.DESC)Pageable pageable) {
+        return ResponseEntity.status(HttpStatus.OK).body(paymentService.findAllByUser(SpecificationTemplate.paymentUserId(userId).and(spec), pageable));
+    }
+
+    @PreAuthorize("hasAnyRole('USER')")
+    @GetMapping("/users/{userId}/payments/{paymentId}")
+    public ResponseEntity<Object> getOnePayment(@PathVariable(value = "userId") UUID userId,
+                                                             @PathVariable(value = "paymentId") UUID paymentId) {
+        Optional<PaymentModel> paymentModelOptional = paymentService.findPaymentByUser(userId, paymentId);
+        if (paymentModelOptional.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Payment not found for this user.");
+        }
+        return ResponseEntity.status(HttpStatus.OK).body(paymentModelOptional.get());
     }
 }

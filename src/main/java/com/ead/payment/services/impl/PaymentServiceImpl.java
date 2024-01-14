@@ -10,12 +10,16 @@ import com.ead.payment.repositories.PaymentRepository;
 import com.ead.payment.services.PaymentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -55,5 +59,15 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     public Optional<PaymentModel> findLastPaymentByUser(UserModel userModel) {
         return paymentRepository.findTopByUserOrderByPaymentRequestDateDesc(userModel);
+    }
+
+    @Override
+    public Page<PaymentModel> findAllByUser(Specification<PaymentModel> spec, Pageable pageable) {
+        return paymentRepository.findAll(spec, pageable);
+    }
+
+    @Override
+    public Optional<PaymentModel> findPaymentByUser(UUID userId, UUID paymentId) {
+        return paymentRepository.findPaymentByUser(userId, paymentId);
     }
 }
