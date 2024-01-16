@@ -1,9 +1,12 @@
 package com.ead.payment.services.impl;
 
+import com.ead.payment.enums.PaymentControl;
 import com.ead.payment.models.CreditCardModel;
 import com.ead.payment.models.PaymentModel;
 import com.ead.payment.services.PaymentStripeService;
 import com.stripe.Stripe;
+import com.stripe.exception.CardException;
+import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
 import com.stripe.model.PaymentMethod;
 import com.stripe.param.PaymentIntentConfirmParams;
@@ -14,6 +17,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.text.MessageFormat;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -48,7 +54,9 @@ public class PaymentStripeServiceImpl implements PaymentStripeService {
                             .setCurrency("brl")
                             .build();
             PaymentIntent paymentIntent = PaymentIntent.create(paramsPaymentIntent);
-            log.info("step 1 ok: {}", paymentIntent);
+            log.info("Payment intent OK: {}", paymentIntent);
+
+            paymentIntentId = paymentIntent.getId();
 
 //          step 2: payment method
 //          https://stripe.com/docs/api/payment_methods/create
@@ -75,7 +83,7 @@ public class PaymentStripeServiceImpl implements PaymentStripeService {
 //                            )
 //                            .build();
 //            PaymentMethod paymentMethod = PaymentMethod.create(params);
-//            log.info("step 2 ok: {}", paymentMethod);
+//            log.info("Payment method OK: {}", paymentMethod);
 
             //step 3: confirmation payment intent
             // https://stripe.com/docs/api/payment_intents/confirm
@@ -83,15 +91,40 @@ public class PaymentStripeServiceImpl implements PaymentStripeService {
 //            paramsPaymentConfirm.put("payment_method", paymentMethod.getId());
 //            PaymentIntent confirmPaymentIntent = paymentIntent.confirm(paramsPaymentConfirm);
 
-            PaymentIntent resource = PaymentIntent.retrieve(paymentIntent.getId());
+            PaymentIntent resource = PaymentIntent.retrieve(paymentIntentId);
             PaymentIntentConfirmParams paramsPaymentConfirm =
                     PaymentIntentConfirmParams.builder()
                             .setPaymentMethod("pm_card_visa")
                             .build();
             PaymentIntent confirmPaymentIntent = resource.confirm(paramsPaymentConfirm);
-            log.info("step 3 ok: {}", confirmPaymentIntent);
+            log.info("Confirm payment intent OK: {}", confirmPaymentIntent);
+
+            if (confirmPaymentIntent.getStatus().equals("succeeded")) {
+                paymentModel.setPaymentControl(PaymentControl.EFFECTED);
+                paymentModel.setPaymentMessage("Payment effected - Payment intent: " + paymentIntentId);
+                paymentModel.setPaymentCompletionDate(LocalDateTime.now(ZoneId.of("UTC")));
+            } else {
+                paymentModel.setPaymentControl(PaymentControl.ERROR);
+                paymentModel.setPaymentMessage("Payment error - Payment intent: " + paymentIntentId);
+            }
+        } catch (CardException cardException) {
+            log.error("A payment error occurred: {}", cardException.getMessage());
+            try {
+                paymentModel.setPaymentControl(PaymentControl.REFUSED);
+                PaymentIntent paymentIntent = PaymentIntent.retrieve(paymentIntentId);
+                paymentModel.setPaymentMessage(
+                        "Payment refused - Payment intent: " + paymentIntentId +
+                        "caused by: " + paymentIntent.getLastPaymentError().getCode() +
+                        "message: " + paymentIntent.getLastPaymentError().getMessage()
+                );
+            } catch (Exception e) {
+                paymentModel.setPaymentMessage("Payment refused - Payment intent: " + paymentIntentId);
+                log.error("Error. Might unrelated to Stripe: {}", e.getMessage());
+            }
         } catch (Exception e) {
-            log.error("Error sending payment to Stripe: {}", e.getMessage());
+            paymentModel.setPaymentControl(PaymentControl.ERROR);
+            paymentModel.setPaymentMessage("Payment error - Payment intent: " + paymentIntentId);
+            log.error("Error. Might unrelated to Stripe: {}", e.getMessage());
         }
         return paymentModel;
     }
