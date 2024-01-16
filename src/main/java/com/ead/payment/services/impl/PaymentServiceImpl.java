@@ -9,7 +9,9 @@ import com.ead.payment.models.UserModel;
 import com.ead.payment.publishers.PaymentCommandPublisher;
 import com.ead.payment.repositories.CreditCardRepository;
 import com.ead.payment.repositories.PaymentRepository;
+import com.ead.payment.repositories.UserRepository;
 import com.ead.payment.services.PaymentService;
+import com.ead.payment.services.PaymentStripeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.BeanUtils;
@@ -31,6 +33,8 @@ public class PaymentServiceImpl implements PaymentService {
 
     final CreditCardRepository creditCardRepository;
     final PaymentRepository paymentRepository;
+    final UserRepository userRepository;
+    final PaymentStripeService paymentStripeService;
     final PaymentCommandPublisher paymentCommandPublisher;
 
     @Transactional
@@ -83,5 +87,15 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     public Optional<PaymentModel> findPaymentByUser(UUID userId, UUID paymentId) {
         return paymentRepository.findPaymentByUser(userId, paymentId);
+    }
+
+    @Transactional
+    @Override
+    public void makePayment(PaymentCommandDto paymentCommandDto) {
+        var paymentModel = paymentRepository.findById(paymentCommandDto.getPaymentId()).get();
+        var userModel = userRepository.findById(paymentCommandDto.getUserId()).get();
+        var creditCardModel = creditCardRepository.findById(paymentCommandDto.getCardId()).get();
+
+        paymentModel = paymentStripeService.processStripePayment(paymentModel, creditCardModel);
     }
 }
