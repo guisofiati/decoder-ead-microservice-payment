@@ -1,11 +1,13 @@
 package com.ead.payment.models;
 
+import com.ead.payment.dtos.PaymentEventDto;
 import com.ead.payment.enums.PaymentControl;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.beans.BeanUtils;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -54,4 +56,12 @@ public class PaymentModel implements Serializable {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     private UserModel user;
+
+    public PaymentEventDto convertToPaymentEventDto() {
+        var paymentEventDto = new PaymentEventDto();
+        BeanUtils.copyProperties(this, paymentEventDto);
+        paymentEventDto.setPaymentControl(this.getPaymentControl().toString());
+        paymentEventDto.setUserId(this.getUser().getUserId());
+        return paymentEventDto;
+    }
 }

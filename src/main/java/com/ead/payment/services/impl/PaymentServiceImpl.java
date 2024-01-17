@@ -8,6 +8,7 @@ import com.ead.payment.models.CreditCardModel;
 import com.ead.payment.models.PaymentModel;
 import com.ead.payment.models.UserModel;
 import com.ead.payment.publishers.PaymentCommandPublisher;
+import com.ead.payment.publishers.PaymentEventPublisher;
 import com.ead.payment.repositories.CreditCardRepository;
 import com.ead.payment.repositories.PaymentRepository;
 import com.ead.payment.repositories.UserRepository;
@@ -37,6 +38,7 @@ public class PaymentServiceImpl implements PaymentService {
     final UserRepository userRepository;
     final PaymentStripeService paymentStripeService;
     final PaymentCommandPublisher paymentCommandPublisher;
+    final PaymentEventPublisher paymentEventPublisher;
 
     @Transactional
     @Override
@@ -110,6 +112,14 @@ public class PaymentServiceImpl implements PaymentService {
                 userModel.setPaymentStatus(PaymentStatus.DEBTOR);
             }
             userRepository.save(userModel);
+
+            var getPaymentControl = paymentModel.getPaymentControl();
+            if (getPaymentControl.equals(PaymentControl.EFFECTED) || getPaymentControl.equals(PaymentControl.REFUSED)) {
+                paymentEventPublisher.publishPaymentEvent(paymentModel.convertToPaymentEventDto());
+                log.info("Payment event sent to queue");
+            } else if (getPaymentControl.equals(PaymentControl.ERROR)) {
+                // TODO: retry process and limits retry
+            }
         }
     }
 }
