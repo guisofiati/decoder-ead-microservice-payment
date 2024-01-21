@@ -1,4 +1,4 @@
-package com.ead.payment.services.impl;
+package com.ead.payment.services;
 
 import com.ead.payment.models.UserModel;
 import com.ead.payment.repositories.UserRepository;
@@ -11,7 +11,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
-public class UserServiceImpl implements UserService {
+public non-sealed class UserServiceImpl implements UserService {
 
     @Autowired
     UserRepository userRepository;

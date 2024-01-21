@@ -5,7 +5,7 @@ import com.ead.payment.models.UserModel;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface UserService {
+public sealed interface UserService permits UserServiceImpl {
 
     UserModel save(UserModel userModel);
     void delete(UUID userId);
